@@ -37,7 +37,7 @@ def start_new_sprint(
     df["date"] = pd.to_datetime(df["date"])
     df.set_index("date", inplace=True)
 
-    save_sheet(sheet_path, sheet_name, df)
+    save_sheet(df, sheet_path, sheet_name)
 
 
 if __name__ == "__main__":

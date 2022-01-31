@@ -40,7 +40,7 @@ def create_test_data(
     df["date"] = pd.to_datetime(df["date"])
     df.set_index("date", inplace=True)
     save_path = save_dir.joinpath("test.xlsx")
-    save_sheet(save_path, "test", df)
+    save_sheet(df, save_path, "test")
 
 
 def test_burndown(tmp_path: Path) -> None:
@@ -59,7 +59,6 @@ def test_burndown(tmp_path: Path) -> None:
 
     today = pd.to_datetime("2022-01-31")
     sprint_dates = SprintDates(today, sprint_length)
-    create_test_data(sprint_dates, storypoints_start, save_path)
     create_test_data(sprint_dates, storypoints_start, save_path)
     df = read_sheet(save_path.joinpath("test.xlsx"), "test")
     plot_burndown(df, sprint_dates, save_path, "Test")

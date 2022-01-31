@@ -1,3 +1,4 @@
+import argparse
 from typing import List
 import pandas as pd
 from burndown.sprint_dates import SprintDates
@@ -28,13 +29,13 @@ def get_ideal_burndown(
     return ideal_burndown
 
 
-def save_sheet(path: Path, sheet_name: str, df: pd.DataFrame) -> None:
+def save_sheet(df: pd.DataFrame, path: Path, sheet_name: str) -> None:
     """Store a dateframe to a sheet.
 
     Args:
+        df (pd.DataFrame): DataFrame to store
         path (Path): Path to excel file to store sheet to
         sheet_name (str): Name of sheet
-        df (pd.DataFrame): DataFrame to store
     """
     print(f"Saving sheet '{sheet_name}' to: {path}")
     writer = pd.ExcelWriter(path, engine="xlsxwriter")
@@ -53,3 +54,31 @@ def read_sheet(path: Path, sheet_name: str) -> pd.DataFrame:
         pd.DataFrame: Content of sheet
     """
     return pd.read_excel(str(path), sheet_name=sheet_name, index_col="date")
+
+
+if __name__ == "__main__":
+    root_path = Path(__file__).parents[1].resolve()
+    sheet_dir = root_path.joinpath("data")
+    sheet_path = sheet_dir.joinpath("burndown.xlsx")
+
+    with pd.ExcelFile(str(sheet_path)) as xl:
+        sheet_name = xl.sheet_names[0]
+
+    read_sheet(sheet_path, sheet_name=sheet_name)
+    df = pd.read_excel(str(sheet_path), index_col="date")
+
+    parser = argparse.ArgumentParser(
+        description="Add storypoints for the current sheet."
+    )
+    parser.add_argument("-p", "--story_points", type=str, help="Remaining story points")
+    parser.add_argument(
+        "-d", "--date", default=None, type=str, help="Date on the form yyyy-mm-dd"
+    )
+    args = parser.parse_args()
+
+    date = (
+        pd.to_datetime(args.date) if args.date is not None else pd.to_datetime("today")
+    )
+    df.loc[date.normalize(), "remaining"] = args.story_points
+
+    save_sheet(df=df, path=sheet_path, sheet_name=sheet_name)
