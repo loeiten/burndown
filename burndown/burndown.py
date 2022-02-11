@@ -2,6 +2,7 @@ import argparse
 from typing import List
 import pandas as pd
 from burndown.sprint_dates import SprintDates
+from burndown.excel_io import read_sheet, save_sheet
 from pathlib import Path
 
 
@@ -29,33 +30,6 @@ def get_ideal_burndown(
     return ideal_burndown
 
 
-def save_sheet(df: pd.DataFrame, path: Path, sheet_name: str) -> None:
-    """Store a dateframe to a sheet.
-
-    Args:
-        df (pd.DataFrame): DataFrame to store
-        path (Path): Path to excel file to store sheet to
-        sheet_name (str): Name of sheet
-    """
-    print(f"Saving sheet '{sheet_name}' to: {path}")
-    writer = pd.ExcelWriter(path, engine="xlsxwriter")
-    df.to_excel(writer, sheet_name=sheet_name)
-    writer.save()
-
-
-def read_sheet(path: Path, sheet_name: str) -> pd.DataFrame:
-    """Load a dataframe from a sheet.
-
-    Args:
-        path (Path): Path to excel file to load from
-        sheet_name (str): Name of sheet
-
-    Returns:
-        pd.DataFrame: Content of sheet
-    """
-    return pd.read_excel(str(path), sheet_name=sheet_name, index_col="date")
-
-
 if __name__ == "__main__":
     root_path = Path(__file__).parents[1].resolve()
     sheet_dir = root_path.joinpath("data")
@@ -64,8 +38,7 @@ if __name__ == "__main__":
     with pd.ExcelFile(str(sheet_path)) as xl:
         sheet_name = xl.sheet_names[0]
 
-    read_sheet(sheet_path, sheet_name=sheet_name)
-    df = pd.read_excel(str(sheet_path), index_col="date")
+    df = read_sheet(sheet_path, sheet_name=sheet_name, index_col="date")
 
     parser = argparse.ArgumentParser(
         description="Add storypoints for the current sheet."

@@ -1,4 +1,6 @@
-from burndown.burndown import save_sheet, get_ideal_burndown
+
+from burndown.excel_io import save_sheet
+from burndown.burndown import get_ideal_burndown
 from burndown.sprint_dates import SprintDates
 import pandas as pd
 from pathlib import Path

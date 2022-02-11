@@ -4,7 +4,8 @@ import numpy as np
 import pandas as pd
 from pathlib import Path
 
-from burndown.burndown import get_ideal_burndown, save_sheet, read_sheet
+from burndown.excel_io import read_sheet, save_sheet
+from burndown.burndown import get_ideal_burndown
 from burndown.sprint_dates import SprintDates
 from burndown.plot import plot_burndown
 
@@ -60,7 +61,7 @@ def test_burndown(tmp_path: Path) -> None:
     today = pd.to_datetime("2022-01-31")
     sprint_dates = SprintDates(today, sprint_length)
     create_test_data(sprint_dates, storypoints_start, save_path)
-    df = read_sheet(save_path.joinpath("test.xlsx"), "test")
+    df = read_sheet(save_path.joinpath("test.xlsx"), "test", "date")
     plot_burndown(df, sprint_dates, save_path, "Test")
 
     assert len(list(save_path.glob("*.png"))) == 1
