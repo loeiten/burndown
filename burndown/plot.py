@@ -74,7 +74,11 @@ def plot_total_burn_and_creep(
 
     # Line plots
     (total,) = ax.plot(
-        df.index, df["accum_burned"], marker=".", markersize=9, label="Total burnt points"
+        df.index,
+        df["accum_burned"],
+        marker=".",
+        markersize=9,
+        label="Total burnt points",
     )
     (creep,) = ax.plot(
         df.index, df["accum_creep"], marker="X", markersize=9, label="Accumulated creep"
@@ -98,9 +102,7 @@ def plot_total_burn_and_creep(
     plt.savefig(str(save_path), dpi=300, transparent=False)
 
 
-def plot_creep_categories(
-    df: pd.DataFrame, save_dir: Path, sprint_name: str
-) -> None:
+def plot_creep_categories(df: pd.DataFrame, save_dir: Path, sprint_name: str) -> None:
     """Plot and save the creep categories.
 
     Args:
@@ -113,7 +115,7 @@ def plot_creep_categories(
 
     # Bar plots
     for category, creep in df.iterrows():
-        ax.bar(category, creep, width=.75)
+        ax.bar(category, creep, width=0.75)
 
     # Prettifying
     ax.set_title(f"{sprint_name} Creep Categories")

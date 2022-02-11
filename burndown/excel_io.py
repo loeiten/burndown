@@ -12,12 +12,17 @@ def save_sheet(df: pd.DataFrame, path: Path, sheet_name: str) -> None:
         sheet_name (str): Name of sheet
     """
     print(f"Saving sheet '{sheet_name}' to: {path}")
-    writer = pd.ExcelWriter(path, engine="xlsxwriter")
+    writer = pd.ExcelWriter(path, engine="openpyxl", mode="a")
     df.to_excel(writer, sheet_name=sheet_name)
     writer.save()
 
 
-def read_sheet(path: Path, sheet_name: str, index_col: Optional[str], usecols: Optional[List] = None) -> pd.DataFrame:
+def read_sheet(
+    path: Path,
+    sheet_name: str,
+    index_col: Optional[str],
+    usecols: Optional[List] = None,
+) -> pd.DataFrame:
     """Load a dataframe from a sheet.
 
     Args:
@@ -30,4 +35,6 @@ def read_sheet(path: Path, sheet_name: str, index_col: Optional[str], usecols: O
         pd.DataFrame: Content of sheet
     """
 
-    return pd.read_excel(str(path), sheet_name=sheet_name, index_col=index_col, usecols=usecols)
+    return pd.read_excel(
+        str(path), sheet_name=sheet_name, index_col=index_col, usecols=usecols
+    )

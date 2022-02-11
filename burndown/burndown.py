@@ -18,7 +18,8 @@ def get_ideal_burndown(
     Returns:
         List[float]: The ideal burndown values
     """
-    ideal_rate = -storypoints_start / sprint_dates.days_of_development
+    # Minus 1 one since we will not expect burn the first day
+    ideal_rate = -storypoints_start / (sprint_dates.days_of_development - 1)
     ideal_burndown = list()
     current_storypoint = storypoints_start
     ideal_burndown.append(current_storypoint)
