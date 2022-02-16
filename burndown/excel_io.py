@@ -12,7 +12,9 @@ def save_sheet(df: pd.DataFrame, path: Path, sheet_name: str) -> None:
         sheet_name (str): Name of sheet
     """
     print(f"Saving sheet '{sheet_name}' to: {path}")
-    writer = pd.ExcelWriter(path, engine="openpyxl", mode="a")
+    writer = pd.ExcelWriter(
+        path, engine="openpyxl", mode="a", if_sheet_exists="replace"
+    )
     df.to_excel(writer, sheet_name=sheet_name)
     writer.save()
 
