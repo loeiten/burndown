@@ -1,13 +1,14 @@
 """Test the burndown chart"""
 
-import numpy as np
-import pandas as pd
 from pathlib import Path
 
-from burndown.excel_io import read_sheet, save_sheet
+import numpy as np
+import pandas as pd
+
 from burndown.burndown import get_ideal_burndown
+from burndown.excel_io import read_sheet, save_sheet
+from burndown.plots import plot_burndown
 from burndown.sprint_dates import SprintDates
-from burndown.plot import plot_burndown
 
 
 def create_test_data(

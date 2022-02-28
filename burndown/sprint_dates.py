@@ -1,4 +1,7 @@
-from typing import Optional, List
+"""Module containing the SprintDates class."""
+
+from typing import List, Optional
+
 import pandas as pd
 from pandas import Timestamp
 
@@ -17,7 +20,8 @@ class SprintDates:
         Args:
             start_date (Timestamp): Start date of the sprint
             sprint_length (int): Length of the spring
-            days_off (Optional[List[Timestamp]], optional): List of days where there will be no sprint. Defaults to None.
+            days_off (Optional[List[Timestamp]], optional):
+                List of days where there will be no sprint. Defaults to None.
         """
         self.dates = None
         self.dates_without_development = None
@@ -42,7 +46,8 @@ class SprintDates:
         """Set the dates where no development is planned.
 
         Args:
-            days_off (Optional[List[Timestamp]], optional): List of days where there will be no sprint. Defaults to None.
+            days_off (Optional[List[Timestamp]], optional):
+                List of days where there will be no sprint. Defaults to None.
         """
         # 6 and 7 are iso Saturday and Sunday
         self.dates_witout_development = [

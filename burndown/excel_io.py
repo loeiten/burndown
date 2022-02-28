@@ -1,13 +1,16 @@
-from typing import Optional, List
-import pandas as pd
+"""Module for storing and loading to excel."""
+
 from pathlib import Path
+from typing import List, Optional
+
+import pandas as pd
 
 
-def save_sheet(df: pd.DataFrame, path: Path, sheet_name: str) -> None:
+def save_sheet(df_to_save: pd.DataFrame, path: Path, sheet_name: str) -> None:
     """Store a dateframe to a sheet.
 
     Args:
-        df (pd.DataFrame): DataFrame to store
+        df_to_save (pd.DataFrame): DataFrame to store
         path (Path): Path to excel file to store sheet to
         sheet_name (str): Name of sheet
     """
@@ -15,7 +18,7 @@ def save_sheet(df: pd.DataFrame, path: Path, sheet_name: str) -> None:
     writer = pd.ExcelWriter(
         path, engine="openpyxl", mode="a", if_sheet_exists="replace"
     )
-    df.to_excel(writer, sheet_name=sheet_name)
+    df_to_save.to_excel(writer, sheet_name=sheet_name)
     writer.save()
 
 

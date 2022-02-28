@@ -130,5 +130,5 @@ dmypy.json
 
 # Custom
 charts/
-data/
+*.xlsx
 .DS_Store

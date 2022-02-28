@@ -1,9 +1,13 @@
-from burndown.excel_io import save_sheet
-from burndown.burndown import get_ideal_burndown
-from burndown.sprint_dates import SprintDates
-import pandas as pd
-from pathlib import Path
+"""Script for starting a new sprint."""
+
 import argparse
+from pathlib import Path
+
+import pandas as pd
+
+from burndown.burndown import get_ideal_burndown
+from burndown.excel_io import save_sheet
+from burndown.sprint_dates import SprintDates
 
 
 def start_new_sprint(
@@ -28,17 +32,17 @@ def start_new_sprint(
     remaining = [None for _ in range(len(sprint_dates.dates))]
     remaining[0] = storypoints_start
 
-    df = pd.DataFrame(
+    burndown_df = pd.DataFrame(
         {
             "date": sprint_dates.dates,
             "ideal_burndown": ideal_burndown,
             "remaining": remaining,
         }
     )
-    df["date"] = pd.to_datetime(df["date"])
-    df.set_index("date", inplace=True)
+    burndown_df["date"] = pd.to_datetime(burndown_df["date"])
+    burndown_df.set_index("date", inplace=True)
 
-    save_sheet(df, sheet_path, sheet_name)
+    save_sheet(burndown_df, sheet_path, sheet_name)
 
 
 if __name__ == "__main__":
@@ -47,7 +51,7 @@ if __name__ == "__main__":
 
     sheet_dir = root_path.joinpath("data")
     sheet_dir.mkdir(parents=True, exist_ok=True)
-    sheet_path = sheet_dir.joinpath("burndown.xlsx")
+    sheet_path_ = sheet_dir.joinpath("burndown.xlsx")
 
     parser = argparse.ArgumentParser(description="Start a sprint.")
     parser.add_argument("-r", "--release", type=str, help="Release number")
@@ -80,13 +84,13 @@ if __name__ == "__main__":
         if args.days_off is not None
         else None
     )
-    sprint_dates = SprintDates(date, args.length, days_off)
+    sprint_dates_ = SprintDates(date, args.length, days_off)
 
-    sheet_name = f"{args.release}-{args.sprint_number}"
+    sheet_name_ = f"{args.release}-{args.sprint_number}"
 
     start_new_sprint(
-        sheet_path=sheet_path,
-        sheet_name=sheet_name,
-        sprint_dates=sprint_dates,
+        sheet_path=sheet_path_,
+        sheet_name=sheet_name_,
+        sprint_dates=sprint_dates_,
         storypoints_start=args.storypoints_start,
     )

@@ -1,9 +1,13 @@
+"""Module containing functions for the sprint burndown."""
+
 import argparse
-from typing import List
-import pandas as pd
-from burndown.sprint_dates import SprintDates
-from burndown.excel_io import read_sheet, save_sheet
 from pathlib import Path
+from typing import List
+
+import pandas as pd
+
+from burndown.excel_io import read_sheet, save_sheet
+from burndown.sprint_dates import SprintDates
 
 
 def get_ideal_burndown(
@@ -39,7 +43,7 @@ if __name__ == "__main__":
     with pd.ExcelFile(str(sheet_path)) as xl:
         sheet_name = xl.sheet_names[0]
 
-    df = read_sheet(sheet_path, sheet_name=sheet_name, index_col="date")
+    df_to_save = read_sheet(sheet_path, sheet_name=sheet_name, index_col="date")
 
     parser = argparse.ArgumentParser(
         description="Add storypoints for the current sheet."
@@ -50,9 +54,9 @@ if __name__ == "__main__":
     )
     args = parser.parse_args()
 
-    date = (
+    date_ = (
         pd.to_datetime(args.date) if args.date is not None else pd.to_datetime("today")
     )
-    df.loc[date.normalize(), "remaining"] = args.story_points
+    df_to_save.loc[date_.normalize(), "remaining"] = args.story_points
 
-    save_sheet(df=df, path=sheet_path, sheet_name=sheet_name)
+    save_sheet(df_to_save=df_to_save, path=sheet_path, sheet_name=sheet_name)
