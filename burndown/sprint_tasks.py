@@ -3,6 +3,7 @@
 from pathlib import Path
 from typing import Dict
 
+import numpy as np
 import pandas as pd
 
 from burndown.excel_io import read_sheet
@@ -55,22 +56,45 @@ class SprintTasks:
             ][self.sprint_tasks_sheets[sprint_name]["category"].notna()]
 
             # Set the dates to date
-            self.sprint_tasks_sheets[sprint_name].loc[:, "creep_date"] = (
-                self.sprint_tasks_sheets[sprint_name].loc[:, "creep_date"].dt.date
-            )
-            self.sprint_tasks_sheets[sprint_name].loc[:, "Date Closed"] = (
-                self.sprint_tasks_sheets[sprint_name].loc[:, "Date Closed"].dt.date
+            try:
+                self.sprint_tasks_sheets[sprint_name].loc[:, "creep_date"] = (
+                    self.sprint_tasks_sheets[sprint_name].loc[:, "creep_date"].dt.date
+                )
+            except AttributeError:
+                # In case there are no dates, pandas will throw an error
+                pass
+            try:
+                self.sprint_tasks_sheets[sprint_name].loc[:, "Date Closed"] = (
+                    self.sprint_tasks_sheets[sprint_name].loc[:, "Date Closed"].dt.date
+                )
+            except AttributeError:
+                # In case there are no dates, pandas will throw an error
+                pass
+
+        # Create sprint planning DataFrames (contains what was agreed upon during sprint planning)
+        self.sprint_planning_dfs = dict()
+        for sprint_name in self.sprint_tasks_sheets.keys():
+            self.sprint_planning_dfs[sprint_name] = self.sprint_tasks_sheets[
+                sprint_name
+            ].copy()
+            self.sprint_planning_dfs[sprint_name] = self.sprint_planning_dfs[
+                sprint_name
+            ].loc[np.isclose(self.sprint_planning_dfs[sprint_name].loc[:, "creep"], 0)]
+            self.sprint_planning_dfs[sprint_name].drop(
+                columns=["creep", "creep_category", "creep_date"], inplace=True
             )
 
         # Create creep DataFrames
         self.creep_dfs = dict()
         for sprint_name in self.sprint_tasks_sheets.keys():
             self.creep_dfs[sprint_name] = self.sprint_tasks_sheets[sprint_name].copy()
+            self.creep_dfs[sprint_name] = self.creep_dfs[sprint_name].loc[
+                ~np.isclose(self.creep_dfs[sprint_name].loc[:, "creep"], 0)
+            ]
             self.creep_dfs[sprint_name].loc[:, "date"] = self.creep_dfs[
                 sprint_name
             ].loc[:, "creep_date"]
             self.creep_dfs[sprint_name].drop(columns="creep_date", inplace=True)
-            self.creep_dfs[sprint_name].dropna(inplace=True)
 
         # Create category DataFrames
         self.category_dfs = dict()
