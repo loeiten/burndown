@@ -1,10 +1,11 @@
 """Module containing the SprintTask class."""
 
 from pathlib import Path
-from typing import Dict
+from typing import Dict, Optional
 
 import numpy as np
 import pandas as pd
+from pandas import Timestamp
 
 from burndown.excel_io import read_sheet
 
@@ -44,6 +45,7 @@ class SprintTasks:
                 "creep_category",
                 "category",
                 "Date Closed",
+                "Original estimate",
                 "Points",
             ],
         )
@@ -74,27 +76,50 @@ class SprintTasks:
         # Create sprint planning DataFrames (contains what was agreed upon during sprint planning)
         self.sprint_planning_dfs = dict()
         for sprint_name in self.sprint_tasks_sheets.keys():
-            self.sprint_planning_dfs[sprint_name] = self.sprint_tasks_sheets[
-                sprint_name
-            ].copy()
-            self.sprint_planning_dfs[sprint_name] = self.sprint_planning_dfs[
-                sprint_name
-            ].loc[np.isclose(self.sprint_planning_dfs[sprint_name].loc[:, "creep"], 0)]
-            self.sprint_planning_dfs[sprint_name].drop(
+            sprint_df = self.sprint_tasks_sheets[sprint_name].copy()
+            # In the case of re-estimation, we will split points between sprint planning and creep
+            # To facilitate this we set the creep of this column to zero ....
+            sprint_df.loc[
+                sprint_df.loc[:, "creep_category"] == "Re-estimation", "creep"
+            ] = 0
+            # ...and set the burn to the original points
+            import pdb; pdb.set_trace()
+            sprint_df.loc[
+                (sprint_df.loc[:, "creep_category"] == "Re-estimation")
+                & ~(np.isclose(sprint_df.loc[:, "burned"], 0)),
+                "burned",
+            ] = sprint_df.loc[
+                (sprint_df.loc[:, "creep_category"] == "Re-estimation")
+                & ~(np.isclose(sprint_df.loc[:, "burned"], 0)),
+                "Original estimate",
+            ]
+
+            sprint_df = sprint_df.loc[np.isclose(sprint_df.loc[:, "creep"], 0)]
+            sprint_df.drop(
                 columns=["creep", "creep_category", "creep_date"], inplace=True
             )
+            self.sprint_planning_dfs[sprint_name] = sprint_df
 
         # Create creep DataFrames
         self.creep_dfs = dict()
         for sprint_name in self.sprint_tasks_sheets.keys():
-            self.creep_dfs[sprint_name] = self.sprint_tasks_sheets[sprint_name].copy()
-            self.creep_dfs[sprint_name] = self.creep_dfs[sprint_name].loc[
-                ~np.isclose(self.creep_dfs[sprint_name].loc[:, "creep"], 0)
+            creep_df = self.sprint_tasks_sheets[sprint_name].copy()
+            # In the case of re-estimation, we will split points between sprint planning and creep
+            # To facilitate this we set the burn to the creep
+            creep_df.loc[
+                (creep_df.loc[:, "creep_category"] == "Re-estimation")
+                & ~(np.isclose(creep_df.loc[:, "burned"], 0)),
+                "burned",
+            ] = creep_df.loc[
+                (creep_df.loc[:, "creep_category"] == "Re-estimation")
+                & ~(np.isclose(creep_df.loc[:, "burned"], 0)),
+                "creep",
             ]
-            self.creep_dfs[sprint_name].loc[:, "date"] = self.creep_dfs[
-                sprint_name
-            ].loc[:, "creep_date"]
-            self.creep_dfs[sprint_name].drop(columns="creep_date", inplace=True)
+
+            creep_df = creep_df.loc[~np.isclose(creep_df.loc[:, "creep"], 0)]
+            creep_df.loc[:, "date"] = creep_df.loc[:, "creep_date"]
+            creep_df.drop(columns="creep_date", inplace=True)
+            self.creep_dfs[sprint_name] = creep_df
 
         # Create category DataFrames
         self.category_dfs = dict()
@@ -207,6 +232,71 @@ class SprintTasks:
         category_df = self._get_categories(group_by="category", col="burned")
         category_df.drop("Duplicate", axis=1, inplace=True)
         return category_df
+
+    def get_sprint_planning_burn(
+        self, sprint_name: str, until_date: Optional[Timestamp] = None
+    ) -> pd.DataFrame:
+        """Get the sprint burndown.
+
+        Args:
+            sprint_name (str): Name of the sprint
+            until_date (Optional[Timestamp]): The date to calculate the creep until. Defaults to None
+
+        Returns:
+            pd.DataFrame: The sprint burndown consisting of remaining points and dates
+        """
+        # FIXME: Enable the until_date timestamp
+        sprint_df = self.sprint_planning_dfs[sprint_name]
+        # Get the number of points as they were during sprint_planning
+        start_points = sprint_df["Original estimation"].sum()
+        sprint_dates = self.burndown_sheets[sprint_name].index
+        burn_dict = {"date": [], "remaining_points": []}
+        for date in sprint_dates:
+            import pdb
+
+            pdb.set_trace()
+            burn_dict["date"].append(date)
+            burn_dict["remaining_points"].append(
+                start_points
+                - sprint_df.loc[sprint_df.loc[:, "Date Closed"] <= date, "burned"].sum()
+            )
+
+        sprint_planning_burn_df = pd.DataFrame(burn_dict)
+        sprint_planning_burn_df.set_index("date")
+        return sprint_planning_burn_df
+
+    def get_creep_burn(
+        self, sprint_name: str, until_date: Optional[Timestamp] = None
+    ) -> pd.DataFrame:
+        """Get the creep burndown.
+
+        Args:
+            sprint_name (str): Name of the sprint
+            until_date (Optional[Timestamp]): The date to calculate the creep until. Defaults to None
+
+        Returns:
+            pd.DataFrame: The sprint creep burndown consisting of remaining points and dates
+        """
+        # FIXME: Enable the until_date timestamp
+        creep_df = self.creep_dfs[sprint_name]
+        sprint_dates = self.burndown_sheets[sprint_name].index
+        burn_dict = {"date": [], "remaining_points": []}
+        for date in sprint_dates:
+            burn_dict["date"].append(date)
+            cur_day_df = creep_df.loc[creep_df.loc[:, "date"] <= date]
+            # FIXME: This doesn't make sense...fixing now
+            # NOTE: For simplicity of splitting sprint burn and creep: If a task has been re-estimated, all will be counted as creep
+            #       In this way when the task is burned all is counted as a creep burn
+            #       Hence we will use th Points column instead of the creep column
+            creep_until_this_day = cur_day_df.loc[:, "Points"].sum()
+            creep_burn_until_this_day = cur_day_df.loc[:, "burned"].sum()
+            burn_dict["remaining_points"].append(
+                creep_until_this_day - creep_burn_until_this_day
+            )
+
+        creep_burn_df = pd.DataFrame(burn_dict)
+        creep_burn_df.set_index("date")
+        return creep_burn_df
 
     def get_total_burn(self) -> pd.DataFrame:
         """
