@@ -5,8 +5,9 @@ from pathlib import Path
 
 import pandas as pd
 
-from burndown.plots import plot_achievement_trend, plot_burn_trend, plot_creep_trend
+from burndown.plots import plot_double_burndown
 from burndown.sprint_tasks import SprintTasks
+from burndown.sprint_dates import SprintDates
 
 
 def main() -> None:
@@ -22,6 +23,16 @@ def main() -> None:
         "--until_day",
         type=str,
         help="Until what day to get the burndown to (on the form yyyy-mm-dd)",
+    )
+    # NOTE: We shouldn't be needing the burndown sheet, and we shouldn't be 
+    #       needing to add the days off argument every time. This is just due
+    #       to tech debt
+    parser.add_argument(
+        "-d",
+        "--days_off",
+        nargs="+",
+        type=str,
+        help="Days without development on the form yyyy-mm-dd (week-ends are inferred)",
     )
 
     args = parser.parse_args()
@@ -41,16 +52,24 @@ def main() -> None:
     )
 
     sprint_planning_burn_df = sprint_tasks.get_sprint_planning_burn(
-        sprint_name=args.release
+        sprint_name=args.release,
+        until_date=until_day
     )
-    creep_burn_df = sprint_tasks.get_creep_burn(sprint_name=args.release)
+    # FIXME: Account for until date
+    sprint_planning_burn_df = pd.concat([sprint_planning_burn_df, sprint_tasks.burndown_sheets[args.release].loc[:, ["ideal_burndown"]]], axis=1)
+    creep_burn_df = sprint_tasks.get_creep_burn(sprint_name=args.release, 
+        until_date=until_day)
+    daily_creep = sprint_tasks.get_daily_creep(sprint_name=args.release,
+        until_date=until_day)
 
-    import pdb
-
-    pdb.set_trace()
-    a = 1
-    # FIXME: Add a subplot which shows daily creep category as stacked bar plot
-    # FIXME: YOU ARE HERE (can use sprint_tasks.sprint_planning_dfs and sprint_tasks.creep_dfs)
+    days_off = (
+        [pd.to_datetime(date) for date in args.days_off]
+        if args.days_off is not None
+        else None
+    )
+    sprint_dates = SprintDates(sprint_tasks.burndown_sheets[args.release].index[0], len(sprint_tasks.burndown_sheets[args.release].index), days_off)
+    
+    plot_double_burndown(sprint_burndown_df=sprint_planning_burn_df, creep_burndown_df=creep_burn_df, daily_creep=daily_creep, sprint_dates=sprint_dates, save_dir=charts_dir, sprint_name=args.release)
 
 
 if __name__ == "__main__":

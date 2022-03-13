@@ -1,11 +1,12 @@
 """Module containing the SprintTask class."""
 
 from pathlib import Path
-from typing import Dict, Optional
+from typing import Dict, Optional, Union
 
 import numpy as np
 import pandas as pd
 from pandas import Timestamp
+from datetime import date
 
 from burndown.excel_io import read_sheet
 
@@ -23,7 +24,7 @@ class SprintTasks:
         """
         # Read all the sheets in burndown in order to obtain the dates
         self.burndown_sheets = read_sheet(
-            burndown_path, sheet_name=None, index_col=None, usecols=["date"]
+            burndown_path, sheet_name=None, index_col=None, usecols=["date", "ideal_burndown"]
         )
 
         # Set the date to date
@@ -83,7 +84,6 @@ class SprintTasks:
                 sprint_df.loc[:, "creep_category"] == "Re-estimation", "creep"
             ] = 0
             # ...and set the burn to the original points
-            import pdb; pdb.set_trace()
             sprint_df.loc[
                 (sprint_df.loc[:, "creep_category"] == "Re-estimation")
                 & ~(np.isclose(sprint_df.loc[:, "burned"], 0)),
@@ -238,6 +238,9 @@ class SprintTasks:
     ) -> pd.DataFrame:
         """Get the sprint burndown.
 
+        NOTE: Burn on the sprint start day is first counted on the next day to
+              fix the points in the sprint start.
+
         Args:
             sprint_name (str): Name of the sprint
             until_date (Optional[Timestamp]): The date to calculate the creep until. Defaults to None
@@ -248,27 +251,33 @@ class SprintTasks:
         # FIXME: Enable the until_date timestamp
         sprint_df = self.sprint_planning_dfs[sprint_name]
         # Get the number of points as they were during sprint_planning
-        start_points = sprint_df["Original estimation"].sum()
+        start_points = sprint_df["Original estimate"].sum()
         sprint_dates = self.burndown_sheets[sprint_name].index
-        burn_dict = {"date": [], "remaining_points": []}
+        burn_dict = {"date": [], "remaining": []}
+        sprint_start = min(sprint_dates)
         for date in sprint_dates:
-            import pdb
-
-            pdb.set_trace()
             burn_dict["date"].append(date)
-            burn_dict["remaining_points"].append(
-                start_points
-                - sprint_df.loc[sprint_df.loc[:, "Date Closed"] <= date, "burned"].sum()
-            )
+            # NOTE: We fix the first day to the sprint planning
+            #       If anything is burned on this day it will first count the next day
+            if date == sprint_start:
+                burn_dict["remaining"].append(start_points)
+            else:
+                burn_dict["remaining"].append(
+                    start_points
+                    - sprint_df.loc[sprint_df.loc[:, "Date Closed"] <= date, "burned"].sum()
+                )
 
         sprint_planning_burn_df = pd.DataFrame(burn_dict)
-        sprint_planning_burn_df.set_index("date")
+        sprint_planning_burn_df.set_index("date", inplace=True)
         return sprint_planning_burn_df
 
     def get_creep_burn(
         self, sprint_name: str, until_date: Optional[Timestamp] = None
     ) -> pd.DataFrame:
         """Get the creep burndown.
+
+        NOTE: Burn on the sprint start day is first counted on the next day to
+              fix the points in the sprint start.
 
         Args:
             sprint_name (str): Name of the sprint
@@ -280,23 +289,54 @@ class SprintTasks:
         # FIXME: Enable the until_date timestamp
         creep_df = self.creep_dfs[sprint_name]
         sprint_dates = self.burndown_sheets[sprint_name].index
-        burn_dict = {"date": [], "remaining_points": []}
+        burn_dict = {"date": [], "remaining": []}
+        sprint_start = min(sprint_dates)
         for date in sprint_dates:
             burn_dict["date"].append(date)
             cur_day_df = creep_df.loc[creep_df.loc[:, "date"] <= date]
-            # FIXME: This doesn't make sense...fixing now
-            # NOTE: For simplicity of splitting sprint burn and creep: If a task has been re-estimated, all will be counted as creep
-            #       In this way when the task is burned all is counted as a creep burn
-            #       Hence we will use th Points column instead of the creep column
-            creep_until_this_day = cur_day_df.loc[:, "Points"].sum()
-            creep_burn_until_this_day = cur_day_df.loc[:, "burned"].sum()
-            burn_dict["remaining_points"].append(
-                creep_until_this_day - creep_burn_until_this_day
-            )
+            creep_until_this_day = cur_day_df.loc[:, "creep"].sum()
+            # NOTE: We fix the first day to the sprint planning
+            #       If anything is burned on this day it will first count the next day
+            if date == sprint_start:
+                burn_dict["remaining"].append(creep_until_this_day)
+            else:
+                creep_burn_until_this_day = cur_day_df.loc[:, "burned"].sum()
+                burn_dict["remaining"].append(
+                    creep_until_this_day - creep_burn_until_this_day
+                )
 
         creep_burn_df = pd.DataFrame(burn_dict)
-        creep_burn_df.set_index("date")
+        creep_burn_df.set_index("date", inplace=True)
         return creep_burn_df
+
+    def get_daily_creep(self, sprint_name:str, until_date: Optional[Timestamp] = None) -> Dict[str, Union[date, str, float]]:
+        """Get the types and points of creeps for the days in the sprint.
+
+        Args:
+            sprint_name (str): Name of the sprint
+            until_date (Optional[Timestamp]): The date to calculate the creep until. Defaults to None
+
+        Returns:
+            Dict[str, Union[date, str, float]]: The sprint creep burndown consisting of remaining points and dates
+        """
+        creep_df = self.creep_dfs[sprint_name]
+        daily_creep_dict = dict()
+        daily_creep_dict["date"] = self.burndown_sheets[sprint_name].index.values
+        # Initialize all categories
+        creep_categories = creep_df.loc[:, "creep_category"].unique()
+        for category in creep_categories:
+            daily_creep_dict[category] = []
+
+        for date in daily_creep_dict["date"]:
+            creeps_cur_date = creep_df.loc[creep_df.loc[:, "date"] == date].groupby("creep_category")[["creep"]].sum()
+            for category in creep_categories:
+                if category in creeps_cur_date.index:
+                    # As we have grouped by there will only be one index, hence the index of 0
+                    daily_creep_dict[category].append(creeps_cur_date.loc[category].values[0])
+                else:
+                    daily_creep_dict[category].append(0)
+
+        return daily_creep_dict
 
     def get_total_burn(self) -> pd.DataFrame:
         """

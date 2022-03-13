@@ -5,6 +5,8 @@ from pathlib import Path
 import matplotlib.pyplot as plt
 import matplotlib.ticker as mtick
 import pandas as pd
+from typing import Dict, Optional, Union
+from datetime import date
 
 from burndown.sprint_dates import SprintDates
 
@@ -60,6 +62,92 @@ def plot_burndown(
     plt.tight_layout()
     save_path = save_dir.joinpath(
         f"{pd.to_datetime('today').date()}-burndown-{sprint_name.lower()}.png"
+    )
+    print(f"Saving image to: {save_path}")
+    plt.savefig(str(save_path), dpi=300, transparent=False)
+
+
+def plot_double_burndown(
+    sprint_burndown_df: pd.DataFrame,
+    creep_burndown_df: pd.DataFrame,
+    daily_creep: Dict[str, Union[date, str, float]],
+    sprint_dates: SprintDates,
+    save_dir: Path,
+    sprint_name: str,
+) -> None:
+    """Plot and save the burndown.
+
+    Args:
+        sprint_burndown_df (pd.DataFrame): The data frame containing the burn down of the points from the sprint planning
+        creep_burndown_df (pd.DataFrame): The data frame containing the burn down of the creeps
+        daily_creep (Dict[str, Union[date, str, float]]): The types and points of creeps for the days in the sprint
+        sprint_dates (SprintDates): Sprint dates object
+        save_dir (Path): Directory to store the plot to
+        sprint_name (str): Name of the sprint
+    """
+    plt.style.use("ggplot")
+    fig, (ax1, ax2) = plt.subplots(2, 1, sharex=True)
+    fig.set_size_inches([6.4, 4.8*2])
+
+    # Shading
+    for date in sprint_dates.dates_witout_development:
+        xmin = date - pd.DateOffset(1)
+        xmax = date
+        ax1.axvspan(xmin=xmin, xmax=xmax, alpha=0.3, color="gray")
+
+    # Mark 0
+    ax1.axhline(y=0, color="k", linestyle="dashed")
+
+
+    # Line plots
+    (ideal,) = ax1.plot(
+        sprint_burndown_df.index,
+        sprint_burndown_df["ideal_burndown"],
+        linestyle="dashed",
+        label="Ideal",
+    )
+    (remaining,) = ax1.plot(
+        sprint_burndown_df.index,
+        sprint_burndown_df["remaining"],
+        marker=".",
+        markersize=9,
+        label="Remaining from planning",
+    )
+    (creep,) = ax1.plot(
+        creep_burndown_df.index,
+        -creep_burndown_df["remaining"],
+        marker=".",
+        markersize=9,
+        label="Remaining creeps",
+    )
+
+    # Stacked bar plot
+    dates = daily_creep.pop("date")
+    prev_values = None
+    # # Set the widths
+    # width = 
+    for category, values in daily_creep.items():
+        ax2.bar(dates, values, bottom=prev_values, label=category)
+        prev_values = values
+
+
+    # Prettifying ax1
+    ax1.set_title(f"{sprint_name} burndown")
+    ax1.legend(handles=[ideal, remaining, creep], loc="best", shadow=True)
+    ax1.set_ylabel("Storypoints")
+
+    # Prettifying ax2
+    ax2.legend(loc="best", shadow=True)
+    ax2.set_ylabel("Storypoints")
+    ax2.set_xlabel("Date")
+    ax2.set_xticks(sprint_burndown_df.index)
+    for label in ax2.get_xticklabels():
+        label.set_rotation(65)
+
+    # Save
+    plt.tight_layout()
+    save_path = save_dir.joinpath(
+        f"{pd.to_datetime('today').date()}-double_burndown-{sprint_name.lower()}.png"
     )
     print(f"Saving image to: {save_path}")
     plt.savefig(str(save_path), dpi=300, transparent=False)
