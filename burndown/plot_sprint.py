@@ -6,8 +6,8 @@ from pathlib import Path
 import pandas as pd
 
 from burndown.plots import (
+    plot_sprint_burn_and_creep,
     plot_sprint_categories,
-    plot_sprint_creep,
     plot_sprint_creep_categories,
 )
 from burndown.sprint_dates import SprintDates
@@ -53,9 +53,13 @@ def main() -> None:
         if args.days_off is not None
         else None
     )
-    sprint_dates = SprintDates(burn_df.index[0], len(burn_df.index), days_off)
+    sprint_dates = SprintDates(
+        sprint_tasks.burndown_sheets[sprint_name].index[0],
+        len(sprint_tasks.burndown_sheets[sprint_name].index),
+        days_off,
+    )
 
-    plot_sprint_creep(burn_df, sprint_dates, charts_dir, sprint_name)
+    plot_sprint_burn_and_creep(burn_df, sprint_dates, charts_dir, sprint_name)
 
     sprint_categories_df = burn_categories_df.loc[
         burn_categories_df.index == sprint_name, :

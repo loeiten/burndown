@@ -39,7 +39,10 @@ def read_sheet(
     Returns:
         pd.DataFrame: Content of sheet
     """
-
     return pd.read_excel(
-        str(path), sheet_name=sheet_name, index_col=index_col, usecols=usecols
+        str(path),
+        sheet_name=sheet_name,
+        index_col=index_col,
+        usecols=usecols,
+        date_parser=lambda col: pd.to_datetime(col, format="%Y-%m-%d").date(),
     )

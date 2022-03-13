@@ -1,6 +1,5 @@
 """Module containing the SprintTask class."""
 
-from datetime import date
 from pathlib import Path
 from typing import Dict, Optional, Union
 
@@ -30,11 +29,16 @@ class SprintTasks:
             usecols=["date", "ideal_burndown"],
         )
 
-        # Set the date to date
+        # Set the index
         for sprint_name in self.burndown_sheets.keys():
+            if self.burndown_sheets[sprint_name].loc[:, "date"].isna().all():
+                self.burndown_sheets[sprint_name].loc[:, "date"] = pd.to_datetime(
+                    self.burndown_sheets[sprint_name].loc[:, "date"]
+                )
             self.burndown_sheets[sprint_name].set_index("date", inplace=True)
 
         # Read all the sheets in sprint_tasks
+        date_cols = ("creep_date", "Date Closed")
         self.sprint_tasks_sheets = read_sheet(
             sprint_tasks_path,
             sheet_name=None,
@@ -51,12 +55,36 @@ class SprintTasks:
             ],
         )
 
-        # Remove bad rows and set the dates to date
         for sprint_name in self.sprint_tasks_sheets.keys():
+            # Remove bad rows and set the dates to date
             # Drop any row where "category" is NaN (for example the sum row)
-            self.sprint_tasks_sheets[sprint_name] = self.sprint_tasks_sheets[
-                sprint_name
-            ][self.sprint_tasks_sheets[sprint_name]["category"].notna()]
+            cur_sprint = self.sprint_tasks_sheets[sprint_name].copy()
+            cur_sprint = cur_sprint[cur_sprint["category"].notna()]
+            # Keep only the date part of the datetime
+            for date_col in date_cols:
+                if cur_sprint.loc[:, date_col].isna().all():
+                    # Convert to datetime in order to use the dt accessor
+                    cur_sprint.loc[:, date_col] = pd.to_datetime(
+                        cur_sprint.loc[:, date_col]
+                    )
+                cur_sprint.loc[:, date_col] = pd.to_datetime(
+                    cur_sprint.loc[:, date_col].dt.date
+                )
+
+            # Keep only close date which belongs to the sprint
+            cur_sprint = cur_sprint.loc[
+                cur_sprint.loc[:, "Date Closed"].isna()
+                | (
+                    cur_sprint.loc[:, "Date Closed"]
+                    <= pd.to_datetime(self.burndown_sheets[sprint_name].index.max())
+                )
+                & (
+                    cur_sprint.loc[:, "Date Closed"]
+                    >= pd.to_datetime(self.burndown_sheets[sprint_name].index.min())
+                ),
+                :,
+            ]
+            self.sprint_tasks_sheets[sprint_name] = cur_sprint
 
         # Create sprint planning DataFrames (contains what was agreed upon during sprint planning)
         self.sprint_planning_dfs = dict()
@@ -153,8 +181,8 @@ class SprintTasks:
 
             # Remove rows outside of sprint window
             merged_df = merged_df.loc[
-                (merged_df.index <= burn_df.index.max())
-                & (merged_df.index >= burn_df.index.min()),
+                (merged_df.index <= pd.to_datetime(burn_df.index.max()))
+                & (merged_df.index >= pd.to_datetime(burn_df.index.min())),
                 :,
             ]
 
@@ -194,6 +222,7 @@ class SprintTasks:
             [categories[sprint] for sprint in self.sprint_tasks_sheets.keys()]
         )
         categories_df.sort_index(inplace=True)
+        categories_df.sort_index(inplace=True, axis=1)
         categories_df.fillna(0, inplace=True)
         return categories_df
 
@@ -220,7 +249,7 @@ class SprintTasks:
             pd.DataFrame: The DataFrame of the creep categories.
         """
         category_df = self._get_categories(group_by="category", col="burned")
-        category_df.drop("Duplicate", axis=1, inplace=True)
+        category_df.drop("Duplicate", axis=1, inplace=True, errors="ignore")
         return category_df
 
     def get_sprint_planning_burn(
@@ -233,7 +262,8 @@ class SprintTasks:
 
         Args:
             sprint_name (str): Name of the sprint
-            until_date (Optional[Timestamp]): The date to calculate the creep until. Defaults to None
+            until_date (Optional[Timestamp]): The date to calculate the creep until.
+                Defaults to None
 
         Returns:
             pd.DataFrame: The sprint burndown consisting of remaining points and dates
@@ -283,7 +313,8 @@ class SprintTasks:
 
         Args:
             sprint_name (str): Name of the sprint
-            until_date (Optional[Timestamp]): The date to calculate the creep until. Defaults to None
+            until_date (Optional[Timestamp]): The date to calculate the creep until.
+                Defaults to None
 
         Returns:
             pd.DataFrame: The sprint creep burndown consisting of remaining points and dates
@@ -325,15 +356,17 @@ class SprintTasks:
 
     def get_daily_creep(
         self, sprint_name: str, until_date: Optional[Timestamp] = None
-    ) -> Dict[str, Union[date, str, float]]:
+    ) -> Dict[str, Union[pd.core.indexes.datetimes.DatetimeIndex, str, float]]:
         """Get the types and points of creeps for the days in the sprint.
 
         Args:
             sprint_name (str): Name of the sprint
-            until_date (Optional[Timestamp]): The date to calculate the creep until. Defaults to None
+            until_date (Optional[Timestamp]): The date to calculate the creep until.
+                Defaults to None
 
         Returns:
-            Dict[str, Union[date, str, float]]: The sprint creep burndown consisting of remaining points and dates
+             Dict[str, Union[pd.core.indexes.datetimes.DatetimeIndex, str, float]]: The sprint
+                creep burndown consisting of remaining points and dates
         """
         creep_df = self.creep_dfs[sprint_name]
         daily_creep_dict = dict()
@@ -394,9 +427,11 @@ class SprintTasks:
                 ),
                 ["Points", "burned"],
             ]
+
             burndown_dict["sprint_start_burned"] = sprint_start_points.loc[
                 :, "burned"
             ].sum()
+
             burndown_dict["achievement"] = (
                 100
                 * burndown_dict["sprint_start_burned"]

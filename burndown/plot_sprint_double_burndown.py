@@ -1,4 +1,6 @@
-"""Script for plotting the day to day double burndown (one for sprint burn another for creep burn)."""
+"""
+Script for plotting the day to day double burndown (one for sprint burn another for creep burn).
+"""
 
 import argparse
 from pathlib import Path
@@ -18,6 +20,7 @@ def main() -> None:
     parser.add_argument(
         "-r", "--release", type=str, help="Release number", required=True
     )
+    parser.add_argument("-s", "--sprint_number", type=str, help="Sprint number")
     parser.add_argument(
         "-u",
         "--until_day",
@@ -36,6 +39,7 @@ def main() -> None:
     )
 
     args = parser.parse_args()
+    sprint_name = f"{args.release}-{args.sprint_number}"
 
     until_day = (
         pd.to_datetime("today")
@@ -54,24 +58,24 @@ def main() -> None:
     )
 
     # In case until_day is outside of the sprint range
-    if until_day > sprint_tasks.burndown_sheets[args.release].index.max():
-        until_day = sprint_tasks.burndown_sheets[args.release].index.max()
+    if until_day > sprint_tasks.burndown_sheets[sprint_name].index.max():
+        until_day = sprint_tasks.burndown_sheets[sprint_name].index.max()
 
     sprint_planning_burn_df = sprint_tasks.get_sprint_planning_burn(
-        sprint_name=args.release, until_date=until_day
+        sprint_name=sprint_name, until_date=until_day
     )
     sprint_planning_burn_df = pd.concat(
         [
             sprint_planning_burn_df,
-            sprint_tasks.burndown_sheets[args.release].loc[:, ["ideal_burndown"]],
+            sprint_tasks.burndown_sheets[sprint_name].loc[:, ["ideal_burndown"]],
         ],
         axis=1,
     )
     creep_burn_df = sprint_tasks.get_creep_burn(
-        sprint_name=args.release, until_date=until_day
+        sprint_name=sprint_name, until_date=until_day
     )
     daily_creep = sprint_tasks.get_daily_creep(
-        sprint_name=args.release, until_date=until_day
+        sprint_name=sprint_name, until_date=until_day
     )
 
     days_off = (
@@ -80,8 +84,8 @@ def main() -> None:
         else None
     )
     sprint_dates = SprintDates(
-        sprint_tasks.burndown_sheets[args.release].index[0],
-        len(sprint_tasks.burndown_sheets[args.release].index),
+        sprint_tasks.burndown_sheets[sprint_name].index[0],
+        len(sprint_tasks.burndown_sheets[sprint_name].index),
         days_off,
     )
 
@@ -91,7 +95,7 @@ def main() -> None:
         daily_creep=daily_creep,
         sprint_dates=sprint_dates,
         save_dir=charts_dir,
-        sprint_name=args.release,
+        sprint_name=sprint_name,
     )
 
 

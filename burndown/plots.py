@@ -1,8 +1,7 @@
 """Module containing plots."""
 
-from datetime import date
 from pathlib import Path
-from typing import Dict, Optional, Union
+from typing import Dict, Union
 
 import matplotlib.pyplot as plt
 import matplotlib.ticker as mtick
@@ -70,7 +69,7 @@ def plot_burndown(
 def plot_double_burndown(
     sprint_burndown_df: pd.DataFrame,
     creep_burndown_df: pd.DataFrame,
-    daily_creep: Dict[str, Union[date, str, float]],
+    daily_creep: Dict[str, Union[pd.core.indexes.datetimes.DatetimeIndex, str, float]],
     sprint_dates: SprintDates,
     save_dir: Path,
     sprint_name: str,
@@ -78,9 +77,11 @@ def plot_double_burndown(
     """Plot and save the burndown.
 
     Args:
-        sprint_burndown_df (pd.DataFrame): The data frame containing the burn down of the points from the sprint planning
+        sprint_burndown_df (pd.DataFrame): The data frame containing the burn down of the points
+            from the sprint planning
         creep_burndown_df (pd.DataFrame): The data frame containing the burn down of the creeps
-        daily_creep (Dict[str, Union[date, str, float]]): The types and points of creeps for the days in the sprint
+        daily_creep ( Dict[str, Union[pd.core.indexes.datetimes.DatetimeIndex, str, float]]):
+            The types and points of creeps for the days in the sprint
         sprint_dates (SprintDates): Sprint dates object
         save_dir (Path): Directory to store the plot to
         sprint_name (str): Name of the sprint
@@ -151,7 +152,7 @@ def plot_double_burndown(
     plt.savefig(str(save_path), dpi=300, transparent=False)
 
 
-def plot_sprint_creep(
+def plot_sprint_burn_and_creep(
     sprint_creep_df: pd.DataFrame,
     sprint_dates: SprintDates,
     save_dir: Path,
@@ -255,8 +256,11 @@ def plot_sprint_categories(
     """
     plt.style.use("ggplot")
     _, axis = plt.subplots()
+    # NOTE: There are a bit too few colors in the cycle of ggplot, so we add some more
+    axis.set_prop_cycle(
+        "color", plt.rcParams["axes.prop_cycle"].by_key()["color"] + ["black"]
+    )
 
-    _, axis = plt.subplots()
     for category, creep in sprint_categories_df.iterrows():
         axis.bar(category, creep, width=0.75)
 
@@ -286,6 +290,10 @@ def plot_burn_trend(burn_trend_df: pd.DataFrame, save_dir: Path) -> None:
     """
     plt.style.use("ggplot")
     fig, axis = plt.subplots()
+    # NOTE: There are a bit too few colors in the cycle of ggplot, so we add some more
+    axis.set_prop_cycle(
+        "color", plt.rcParams["axes.prop_cycle"].by_key()["color"] + ["black"]
+    )
     fig.set_size_inches([10, 4.8])
 
     # Stack plot

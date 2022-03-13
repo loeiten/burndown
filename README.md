@@ -40,7 +40,6 @@ Plotting can be done by
 
 ```bash
 python -m burndown.plot_sprint -r 2.5 -s 5
-python -m burndown.plot_burned_categories -r 2.5 -s 5
 python -m burndown.plot_sprint_trends
-python -m burndown.plot_sprint_double_burndown -r 2.5-6 -u 2022-02-18
+python -m burndown.plot_sprint_double_burndown -r 2.5 -s 6 -u 2022-02-18
 ```
