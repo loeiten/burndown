@@ -6,8 +6,8 @@ from pathlib import Path
 import pandas as pd
 
 from burndown.plots import plot_double_burndown
-from burndown.sprint_tasks import SprintTasks
 from burndown.sprint_dates import SprintDates
+from burndown.sprint_tasks import SprintTasks
 
 
 def main() -> None:
@@ -24,7 +24,7 @@ def main() -> None:
         type=str,
         help="Until what day to get the burndown to (on the form yyyy-mm-dd)",
     )
-    # NOTE: We shouldn't be needing the burndown sheet, and we shouldn't be 
+    # NOTE: We shouldn't be needing the burndown sheet, and we shouldn't be
     #       needing to add the days off argument every time. This is just due
     #       to tech debt
     parser.add_argument(
@@ -37,13 +37,15 @@ def main() -> None:
 
     args = parser.parse_args()
 
-    until_day = None if args.until_day is None else pd.to_datetime(args.until_day)
+    until_day = (
+        pd.to_datetime("today")
+        if args.until_day is None
+        else pd.to_datetime(args.until_day)
+    )
 
     root_path = Path(__file__).parents[1].resolve()
     charts_dir = root_path.joinpath("charts")
     sheet_dir = root_path.joinpath("data")
-    # FIXME: Optional argument date to plot until a specific date
-    # FIXME: Update README.md
     sprint_tasks_path = sheet_dir.joinpath("sprint_tasks.xlsx")
     burndown_path = sheet_dir.joinpath("burndown.xlsx")
 
@@ -51,25 +53,46 @@ def main() -> None:
         sprint_tasks_path=sprint_tasks_path, burndown_path=burndown_path
     )
 
+    # In case until_day is outside of the sprint range
+    if until_day > sprint_tasks.burndown_sheets[args.release].index.max():
+        until_day = sprint_tasks.burndown_sheets[args.release].index.max()
+
     sprint_planning_burn_df = sprint_tasks.get_sprint_planning_burn(
-        sprint_name=args.release,
-        until_date=until_day
+        sprint_name=args.release, until_date=until_day
     )
-    # FIXME: Account for until date
-    sprint_planning_burn_df = pd.concat([sprint_planning_burn_df, sprint_tasks.burndown_sheets[args.release].loc[:, ["ideal_burndown"]]], axis=1)
-    creep_burn_df = sprint_tasks.get_creep_burn(sprint_name=args.release, 
-        until_date=until_day)
-    daily_creep = sprint_tasks.get_daily_creep(sprint_name=args.release,
-        until_date=until_day)
+    sprint_planning_burn_df = pd.concat(
+        [
+            sprint_planning_burn_df,
+            sprint_tasks.burndown_sheets[args.release].loc[:, ["ideal_burndown"]],
+        ],
+        axis=1,
+    )
+    creep_burn_df = sprint_tasks.get_creep_burn(
+        sprint_name=args.release, until_date=until_day
+    )
+    daily_creep = sprint_tasks.get_daily_creep(
+        sprint_name=args.release, until_date=until_day
+    )
 
     days_off = (
         [pd.to_datetime(date) for date in args.days_off]
         if args.days_off is not None
         else None
     )
-    sprint_dates = SprintDates(sprint_tasks.burndown_sheets[args.release].index[0], len(sprint_tasks.burndown_sheets[args.release].index), days_off)
-    
-    plot_double_burndown(sprint_burndown_df=sprint_planning_burn_df, creep_burndown_df=creep_burn_df, daily_creep=daily_creep, sprint_dates=sprint_dates, save_dir=charts_dir, sprint_name=args.release)
+    sprint_dates = SprintDates(
+        sprint_tasks.burndown_sheets[args.release].index[0],
+        len(sprint_tasks.burndown_sheets[args.release].index),
+        days_off,
+    )
+
+    plot_double_burndown(
+        sprint_burndown_df=sprint_planning_burn_df,
+        creep_burndown_df=creep_burn_df,
+        daily_creep=daily_creep,
+        sprint_dates=sprint_dates,
+        save_dir=charts_dir,
+        sprint_name=args.release,
+    )
 
 
 if __name__ == "__main__":

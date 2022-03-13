@@ -1,12 +1,12 @@
 """Module containing plots."""
 
+from datetime import date
 from pathlib import Path
+from typing import Dict, Optional, Union
 
 import matplotlib.pyplot as plt
 import matplotlib.ticker as mtick
 import pandas as pd
-from typing import Dict, Optional, Union
-from datetime import date
 
 from burndown.sprint_dates import SprintDates
 
@@ -87,7 +87,7 @@ def plot_double_burndown(
     """
     plt.style.use("ggplot")
     fig, (ax1, ax2) = plt.subplots(2, 1, sharex=True)
-    fig.set_size_inches([6.4, 4.8*2])
+    fig.set_size_inches([6.4, 4.8 * 2])
 
     # Shading
     for date in sprint_dates.dates_witout_development:
@@ -97,7 +97,6 @@ def plot_double_burndown(
 
     # Mark 0
     ax1.axhline(y=0, color="k", linestyle="dashed")
-
 
     # Line plots
     (ideal,) = ax1.plot(
@@ -125,11 +124,10 @@ def plot_double_burndown(
     dates = daily_creep.pop("date")
     prev_values = None
     # # Set the widths
-    # width = 
+    # width =
     for category, values in daily_creep.items():
         ax2.bar(dates, values, bottom=prev_values, label=category)
         prev_values = values
-
 
     # Prettifying ax1
     ax1.set_title(f"{sprint_name} burndown")

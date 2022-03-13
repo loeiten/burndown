@@ -1,12 +1,12 @@
 """Module containing the SprintTask class."""
 
+from datetime import date
 from pathlib import Path
 from typing import Dict, Optional, Union
 
 import numpy as np
 import pandas as pd
 from pandas import Timestamp
-from datetime import date
 
 from burndown.excel_io import read_sheet
 
@@ -24,14 +24,14 @@ class SprintTasks:
         """
         # Read all the sheets in burndown in order to obtain the dates
         self.burndown_sheets = read_sheet(
-            burndown_path, sheet_name=None, index_col=None, usecols=["date", "ideal_burndown"]
+            burndown_path,
+            sheet_name=None,
+            index_col=None,
+            usecols=["date", "ideal_burndown"],
         )
 
         # Set the date to date
         for sprint_name in self.burndown_sheets.keys():
-            self.burndown_sheets[sprint_name].loc[:, "date"] = (
-                self.burndown_sheets[sprint_name].loc[:, "date"].dt.date
-            )
             self.burndown_sheets[sprint_name].set_index("date", inplace=True)
 
         # Read all the sheets in sprint_tasks
@@ -58,22 +58,6 @@ class SprintTasks:
                 sprint_name
             ][self.sprint_tasks_sheets[sprint_name]["category"].notna()]
 
-            # Set the dates to date
-            try:
-                self.sprint_tasks_sheets[sprint_name].loc[:, "creep_date"] = (
-                    self.sprint_tasks_sheets[sprint_name].loc[:, "creep_date"].dt.date
-                )
-            except AttributeError:
-                # In case there are no dates, pandas will throw an error
-                pass
-            try:
-                self.sprint_tasks_sheets[sprint_name].loc[:, "Date Closed"] = (
-                    self.sprint_tasks_sheets[sprint_name].loc[:, "Date Closed"].dt.date
-                )
-            except AttributeError:
-                # In case there are no dates, pandas will throw an error
-                pass
-
         # Create sprint planning DataFrames (contains what was agreed upon during sprint planning)
         self.sprint_planning_dfs = dict()
         for sprint_name in self.sprint_tasks_sheets.keys():
@@ -94,7 +78,10 @@ class SprintTasks:
                 "Original estimate",
             ]
 
-            sprint_df = sprint_df.loc[np.isclose(sprint_df.loc[:, "creep"], 0)]
+            sprint_df = sprint_df.loc[
+                (np.isclose(sprint_df.loc[:, "creep"], 0))
+                | (sprint_df.loc[:, "creep"].isna())
+            ]
             sprint_df.drop(
                 columns=["creep", "creep_category", "creep_date"], inplace=True
             )
@@ -116,7 +103,10 @@ class SprintTasks:
                 "creep",
             ]
 
-            creep_df = creep_df.loc[~np.isclose(creep_df.loc[:, "creep"], 0)]
+            creep_df = creep_df.loc[
+                ~np.isclose(creep_df.loc[:, "creep"], 0)
+                & ~(creep_df.loc[:, "creep"].isna())
+            ]
             creep_df.loc[:, "date"] = creep_df.loc[:, "creep_date"]
             creep_df.drop(columns="creep_date", inplace=True)
             self.creep_dfs[sprint_name] = creep_df
@@ -248,11 +238,17 @@ class SprintTasks:
         Returns:
             pd.DataFrame: The sprint burndown consisting of remaining points and dates
         """
-        # FIXME: Enable the until_date timestamp
         sprint_df = self.sprint_planning_dfs[sprint_name]
         # Get the number of points as they were during sprint_planning
         start_points = sprint_df["Original estimate"].sum()
-        sprint_dates = self.burndown_sheets[sprint_name].index
+        if until_date is not None:
+            sprint_dates = (
+                self.burndown_sheets[sprint_name]
+                .loc[self.burndown_sheets[sprint_name].index <= until_date]
+                .index
+            )
+        else:
+            sprint_dates = self.burndown_sheets[sprint_name].index
         burn_dict = {"date": [], "remaining": []}
         sprint_start = min(sprint_dates)
         for date in sprint_dates:
@@ -262,10 +258,16 @@ class SprintTasks:
             if date == sprint_start:
                 burn_dict["remaining"].append(start_points)
             else:
-                burn_dict["remaining"].append(
-                    start_points
-                    - sprint_df.loc[sprint_df.loc[:, "Date Closed"] <= date, "burned"].sum()
-                )
+                if sprint_df.loc[:, "Date Closed"].isna().all():
+                    # Special case when nothing is burned
+                    burn_dict["remaining"].append(start_points)
+                else:
+                    burn_dict["remaining"].append(
+                        start_points
+                        - sprint_df.loc[
+                            sprint_df.loc[:, "Date Closed"] <= date, "burned"
+                        ].sum()
+                    )
 
         sprint_planning_burn_df = pd.DataFrame(burn_dict)
         sprint_planning_burn_df.set_index("date", inplace=True)
@@ -286,30 +288,44 @@ class SprintTasks:
         Returns:
             pd.DataFrame: The sprint creep burndown consisting of remaining points and dates
         """
-        # FIXME: Enable the until_date timestamp
         creep_df = self.creep_dfs[sprint_name]
-        sprint_dates = self.burndown_sheets[sprint_name].index
+        if until_date is not None:
+            sprint_dates = (
+                self.burndown_sheets[sprint_name]
+                .loc[self.burndown_sheets[sprint_name].index <= until_date]
+                .index
+            )
+        else:
+            sprint_dates = self.burndown_sheets[sprint_name].index
         burn_dict = {"date": [], "remaining": []}
-        sprint_start = min(sprint_dates)
-        for date in sprint_dates:
-            burn_dict["date"].append(date)
-            cur_day_df = creep_df.loc[creep_df.loc[:, "date"] <= date]
-            creep_until_this_day = cur_day_df.loc[:, "creep"].sum()
-            # NOTE: We fix the first day to the sprint planning
-            #       If anything is burned on this day it will first count the next day
-            if date == sprint_start:
-                burn_dict["remaining"].append(creep_until_this_day)
-            else:
-                creep_burn_until_this_day = cur_day_df.loc[:, "burned"].sum()
-                burn_dict["remaining"].append(
-                    creep_until_this_day - creep_burn_until_this_day
-                )
+
+        if creep_df.loc[:, "date"].isna().all():
+            # Special case when nothing has creeped
+            burn_dict["date"] = sprint_dates
+            burn_dict["remaining"] = [0] * len(sprint_dates)
+        else:
+            sprint_start = min(sprint_dates)
+            for date in sprint_dates:
+                burn_dict["date"].append(date)
+                cur_day_df = creep_df.loc[creep_df.loc[:, "date"] <= date]
+                creep_until_this_day = cur_day_df.loc[:, "creep"].sum()
+                # NOTE: We fix the first day to the sprint planning
+                #       If anything is burned on this day it will first count the next day
+                if date == sprint_start:
+                    burn_dict["remaining"].append(creep_until_this_day)
+                else:
+                    creep_burn_until_this_day = cur_day_df.loc[:, "burned"].sum()
+                    burn_dict["remaining"].append(
+                        creep_until_this_day - creep_burn_until_this_day
+                    )
 
         creep_burn_df = pd.DataFrame(burn_dict)
         creep_burn_df.set_index("date", inplace=True)
         return creep_burn_df
 
-    def get_daily_creep(self, sprint_name:str, until_date: Optional[Timestamp] = None) -> Dict[str, Union[date, str, float]]:
+    def get_daily_creep(
+        self, sprint_name: str, until_date: Optional[Timestamp] = None
+    ) -> Dict[str, Union[date, str, float]]:
         """Get the types and points of creeps for the days in the sprint.
 
         Args:
@@ -321,18 +337,31 @@ class SprintTasks:
         """
         creep_df = self.creep_dfs[sprint_name]
         daily_creep_dict = dict()
-        daily_creep_dict["date"] = self.burndown_sheets[sprint_name].index.values
+        if until_date is not None:
+            daily_creep_dict["date"] = (
+                self.burndown_sheets[sprint_name]
+                .loc[self.burndown_sheets[sprint_name].index <= until_date]
+                .index
+            )
+        else:
+            daily_creep_dict["date"] = self.burndown_sheets[sprint_name].index.values
         # Initialize all categories
-        creep_categories = creep_df.loc[:, "creep_category"].unique()
+        creep_categories = sorted(creep_df.loc[:, "creep_category"].dropna().unique())
         for category in creep_categories:
             daily_creep_dict[category] = []
 
         for date in daily_creep_dict["date"]:
-            creeps_cur_date = creep_df.loc[creep_df.loc[:, "date"] == date].groupby("creep_category")[["creep"]].sum()
+            creeps_cur_date = (
+                creep_df.loc[creep_df.loc[:, "date"] == date]
+                .groupby("creep_category")[["creep"]]
+                .sum()
+            )
             for category in creep_categories:
                 if category in creeps_cur_date.index:
                     # As we have grouped by there will only be one index, hence the index of 0
-                    daily_creep_dict[category].append(creeps_cur_date.loc[category].values[0])
+                    daily_creep_dict[category].append(
+                        creeps_cur_date.loc[category].values[0]
+                    )
                 else:
                     daily_creep_dict[category].append(0)
 
