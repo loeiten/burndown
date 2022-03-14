@@ -1,4 +1,4 @@
-"""Module containing plots."""
+"""Module containing burndown plots."""
 
 from pathlib import Path
 from typing import Dict, Union
@@ -137,7 +137,7 @@ def plot_double_burndown(
 
     # Prettifying ax2
     ax2.legend(loc="best", shadow=True)
-    ax2.set_ylabel("Storypoints")
+    ax2.set_ylabel("Added creeps")
     ax2.set_xlabel("Date")
     ax2.set_xticks(sprint_burndown_df.index)
     for label in ax2.get_xticklabels():

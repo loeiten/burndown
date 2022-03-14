@@ -59,7 +59,7 @@ if __name__ == "__main__":
     parser.add_argument(
         "-p",
         "--storypoints_start",
-        type=int,
+        type=float,
         help="Number of storypoints at sprint start",
     )
     parser.add_argument(

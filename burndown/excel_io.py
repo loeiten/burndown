@@ -1,7 +1,7 @@
 """Module for storing and loading to excel."""
 
 from pathlib import Path
-from typing import List, Optional
+from typing import Dict, List, Optional, Union
 
 import pandas as pd
 
@@ -24,25 +24,21 @@ def save_sheet(df_to_save: pd.DataFrame, path: Path, sheet_name: str) -> None:
 
 def read_sheet(
     path: Path,
-    sheet_name: str,
-    index_col: Optional[str],
+    sheet_name: Optional[str] = None,
+    index_col: Optional[str] = None,
     usecols: Optional[List] = None,
-) -> pd.DataFrame:
+) -> Union[pd.DataFrame, Dict[str, pd.DataFrame]]:
     """Load a dataframe from a sheet.
 
     Args:
         path (Path): Path to excel file to load from
-        sheet_name (str): Name of sheet
-        index_col (str): Column to use as index
+        sheet_name (Optional[str], optional): Name of sheet. Defaults to None.
+        index_col (Optional[str], optional): Column to use as index. Defaults to None.
         usecols (Optional[List], optional): Columns to parse. Defaults to None.
 
     Returns:
-        pd.DataFrame: Content of sheet
+        Union[pd.DataFrame, Dict[str, pd.DataFrame]]: Content of sheet(s)
     """
     return pd.read_excel(
-        str(path),
-        sheet_name=sheet_name,
-        index_col=index_col,
-        usecols=usecols,
-        date_parser=lambda col: pd.to_datetime(col, format="%Y-%m-%d").date(),
+        str(path), sheet_name=sheet_name, index_col=index_col, usecols=usecols
     )
