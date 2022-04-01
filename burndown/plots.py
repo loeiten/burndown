@@ -96,9 +96,6 @@ def plot_double_burndown(
         xmax = date
         ax1.axvspan(xmin=xmin, xmax=xmax, alpha=0.3, color="gray")
 
-    # Mark 0
-    ax1.axhline(y=0, color="k", linestyle="dashed")
-
     # Line plots
     (ideal,) = ax1.plot(
         sprint_burndown_df.index,
@@ -124,8 +121,6 @@ def plot_double_burndown(
     # Stacked bar plot
     dates = daily_creep.pop("date")
     prev_values = None
-    # # Set the widths
-    # width =
     for category, values in daily_creep.items():
         ax2.bar(dates, values, bottom=prev_values, label=category)
         prev_values = values
@@ -134,6 +129,8 @@ def plot_double_burndown(
     ax1.set_title(f"{sprint_name} burndown")
     ax1.legend(handles=[ideal, remaining, creep], loc="best", shadow=True)
     ax1.set_ylabel("Storypoints")
+    # Mark 0
+    ax1.axhline(y=0, color="k", linestyle="dashed")
 
     # Prettifying ax2
     ax2.legend(loc="best", shadow=True)
@@ -142,6 +139,8 @@ def plot_double_burndown(
     ax2.set_xticks(sprint_burndown_df.index)
     for label in ax2.get_xticklabels():
         label.set_rotation(65)
+    # Mark 0
+    ax2.axhline(y=0, color="k", linestyle="dashed")
 
     # Save
     plt.tight_layout()
@@ -439,6 +438,54 @@ def plot_achievement_trend(achievement_df: pd.DataFrame, save_dir: Path) -> None
     plt.tight_layout()
     save_path = save_dir.joinpath(
         f"{pd.to_datetime('today').date()}-achievement_trend.png"
+    )
+    print(f"Saving image to: {save_path}")
+    plt.savefig(str(save_path), dpi=300, transparent=False)
+
+
+def plot_capacity_adjusted_burn(
+    burndown_trend_df: pd.DataFrame, save_dir: Path
+) -> None:
+    """
+    Plot and save the capacity adjusted burndown trend.
+
+    Args:
+        burndown_trend_df (pd.DataFrame): The data frame containing the burndowns across
+            sprints
+        save_dir (Path): Directory to store the plot to
+    """
+    plt.style.use("ggplot")
+    _, axis = plt.subplots()
+
+    # Line plots
+    (adjusted,) = axis.plot(
+        burndown_trend_df.index,
+        burndown_trend_df["capacity_adjusted_burn"],
+        marker=".",
+        markersize=9,
+        label="Total burn/capacity",
+    )
+    (avg,) = axis.plot(
+        burndown_trend_df.index,
+        burndown_trend_df["rolling_average"],
+        linestyle="dashed",
+        label="Rolling mean (5 sprints)",
+    )
+
+    # Prettifying
+    axis.legend(handles=[adjusted, avg], loc="best", shadow=True)
+
+    # Prettifying
+    axis.set_title("Capacity adjusted burn trend")
+    axis.set_ylabel("Storypoints")
+    axis.set_xlabel("Sprint")
+    for label in axis.get_xticklabels():
+        label.set_rotation(65)
+
+    # Save
+    plt.tight_layout()
+    save_path = save_dir.joinpath(
+        f"{pd.to_datetime('today').date()}-capacity_adjusted_trend.png"
     )
     print(f"Saving image to: {save_path}")
     plt.savefig(str(save_path), dpi=300, transparent=False)

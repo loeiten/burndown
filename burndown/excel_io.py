@@ -1,7 +1,8 @@
 """Module for storing and loading to excel."""
 
+import string
 from pathlib import Path
-from typing import Dict, List, Optional, Union
+from typing import Any, Dict, List, Optional, Union
 
 import pandas as pd
 
@@ -42,3 +43,35 @@ def read_sheet(
     return pd.read_excel(
         str(path), sheet_name=sheet_name, index_col=index_col, usecols=usecols
     )
+
+
+def read_cell(
+    path: Path,
+    sheet_name: str,
+    column: str,
+    row: int,
+) -> Any:
+    """Read a single cell value from an Excel file.
+
+    Args:
+        path (Path): Path to excel file to load from
+        sheet_name (str): Name of sheet
+        column (str): Column to read from
+        row (int): Row to read from
+
+    Returns:
+        Any: Value of the cell
+    """
+    # Map column to the index number
+    alphabet_dict = dict(enumerate(string.ascii_uppercase))
+    reverse_alphabet_dict = {number: letter for letter, number in alphabet_dict.items()}
+    column = reverse_alphabet_dict[column]
+
+    return pd.read_excel(
+        str(path),
+        sheet_name=sheet_name,
+        skiprows=row - 1,
+        usecols=[column],
+        nrows=1,
+        header=None,
+    ).values[0][0]

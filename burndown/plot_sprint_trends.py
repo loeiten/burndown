@@ -3,7 +3,12 @@
 import argparse
 from pathlib import Path
 
-from burndown.plots import plot_achievement_trend, plot_burn_trend, plot_creep_trend
+from burndown.plots import (
+    plot_achievement_trend,
+    plot_burn_trend,
+    plot_capacity_adjusted_burn,
+    plot_creep_trend,
+)
 from burndown.sprint_tasks import SprintTasks
 
 
@@ -29,6 +34,7 @@ def main() -> None:
     plot_creep_trend(creep_categories, charts_dir)
     total_burn = sprint_tasks.get_total_burn()
     plot_achievement_trend(total_burn, charts_dir)
+    plot_capacity_adjusted_burn(total_burn, charts_dir)
 
 
 if __name__ == "__main__":

@@ -7,7 +7,7 @@ import numpy as np
 import pandas as pd
 from pandas import Timestamp
 
-from burndown.excel_io import read_sheet
+from burndown.excel_io import read_cell, read_sheet
 
 
 class SprintTasks:
@@ -21,6 +21,7 @@ class SprintTasks:
             sprint_tasks_path (Path): Path to the spreadsheet containing the creeps
             burndown_path (Path): Path to the spreadsheet containing the burndown
         """
+        self.sheet_dir = sprint_tasks_path.parent
         # Read all the sheets in burndown in order to obtain the dates
         self.burndown_sheets = read_sheet(
             burndown_path,
@@ -444,4 +445,33 @@ class SprintTasks:
         )
         burndown.sort_index(inplace=True)
         burndown.fillna(0, inplace=True)
+
+        # Get the capacity numbers
+        capacity_path = self.sheet_dir.joinpath("capacity.xlsx")
+        capacity_dict = {"capacity": list(), "index": list()}
+        for sprint in burndown.index:
+            capacity_dict["index"].append(sprint)
+            capacity_dict["capacity"].append(
+                read_cell(path=capacity_path, sheet_name=sprint, column="F", row=11)
+            )
+
+        capacity_df = pd.DataFrame(capacity_dict)
+        capacity_df.set_index("index", inplace=True)
+        burndown = pd.concat([burndown, capacity_df], axis=1)
+        burndown["capacity_adjusted_burn"] = (
+            burndown["total_points"] / burndown["capacity"]
+        )
+        window_size = 5
+        burndown["rolling_average"] = (
+            burndown.loc[:, "capacity_adjusted_burn"].rolling(window=window_size).mean()
+        )
+        # Fill the nan-window
+        burndown.loc[
+            burndown.index[0 : window_size - 1], "rolling_average"
+        ] = burndown.loc[
+            burndown.index[window_size - 1 : window_size], "rolling_average"
+        ].values[
+            0
+        ]
+
         return burndown
