@@ -346,7 +346,9 @@ class SprintTasks:
                 if date == sprint_start:
                     burn_dict["remaining"].append(creep_until_this_day)
                 else:
-                    creep_burn_until_this_day = cur_day_df.loc[:, "burned"].sum()
+                    creep_burn_until_this_day = cur_day_df.loc[
+                        creep_df.loc[:, "Date Closed"] <= date, "burned"
+                    ].sum()
                     burn_dict["remaining"].append(
                         creep_until_this_day - creep_burn_until_this_day
                     )
