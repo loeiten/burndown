@@ -61,6 +61,8 @@ class SprintTasks:
             # Drop any row where "category" is NaN (for example the sum row)
             cur_sprint = self.sprint_tasks_sheets[sprint_name].copy()
             cur_sprint = cur_sprint[cur_sprint["category"].notna()]
+            # Drop rows task duplicates
+            cur_sprint = cur_sprint[~cur_sprint.category.str.contains("Duplicate")]
             # Keep only the date part of the datetime
             for date_col in date_cols:
                 if cur_sprint.loc[:, date_col].isna().all():
@@ -250,7 +252,6 @@ class SprintTasks:
             pd.DataFrame: The DataFrame of the creep categories.
         """
         category_df = self._get_categories(group_by="category", col="burned")
-        category_df.drop("Duplicate", axis=1, inplace=True, errors="ignore")
         return category_df
 
     def get_sprint_planning_burn(

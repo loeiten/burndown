@@ -120,10 +120,24 @@ def plot_double_burndown(
 
     # Stacked bar plot
     dates = daily_creep.pop("date")
-    prev_values = None
+    # Initialize bottom values to 0
+    pos_values_cur_bottom = [0] * len(daily_creep[list(daily_creep.keys())[0]])
+    neg_values_cur_bottom = [0] * len(pos_values_cur_bottom)
+    bottom = [0] * len(neg_values_cur_bottom)
     for category, values in daily_creep.items():
-        ax2.bar(dates, values, bottom=prev_values, label=category)
-        prev_values = values
+        # Keep track of positive and negative values as two different stacks
+        for index, value in enumerate(values):
+            if value > 0:
+                bottom[index] = pos_values_cur_bottom[index]
+            else:
+                bottom[index] = neg_values_cur_bottom[index]
+        ax2.bar(dates, values, bottom=bottom, label=category)
+        # Update prev values
+        for index, value in enumerate(values):
+            if value > 0:
+                pos_values_cur_bottom[index] += value
+            else:
+                neg_values_cur_bottom[index] += value
 
     # Prettifying ax1
     ax1.set_title(f"{sprint_name} burndown")
