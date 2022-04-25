@@ -28,7 +28,7 @@ def get_ideal_burndown(
     current_storypoint = storypoints_start
     ideal_burndown.append(current_storypoint)
     for date in sprint_dates.dates[1:]:
-        if date not in sprint_dates.dates_witout_development:
+        if date not in sprint_dates.dates_without_development:
             current_storypoint += ideal_rate
 
         ideal_burndown.append(current_storypoint)

@@ -28,7 +28,7 @@ def plot_burndown(
     _, axis = plt.subplots()
 
     # Shading
-    for date in sprint_dates.dates_witout_development:
+    for date in sprint_dates.dates_without_development:
         xmin = date - pd.DateOffset(1)
         xmax = date
         axis.axvspan(xmin=xmin, xmax=xmax, alpha=0.3, color="gray")
@@ -91,7 +91,7 @@ def plot_double_burndown(
     fig.set_size_inches([6.4, 4.8 * 2])
 
     # Shading
-    for date in sprint_dates.dates_witout_development:
+    for date in sprint_dates.dates_without_development:
         xmin = date - pd.DateOffset(1)
         xmax = date
         ax1.axvspan(xmin=xmin, xmax=xmax, alpha=0.3, color="gray")
@@ -121,7 +121,11 @@ def plot_double_burndown(
     # Stacked bar plot
     dates = daily_creep.pop("date")
     # Initialize bottom values to 0
-    pos_values_cur_bottom = [0] * len(daily_creep[list(daily_creep.keys())[0]])
+    if len(daily_creep) != 0:
+        pos_values_cur_bottom = [0] * len(daily_creep[list(daily_creep.keys())[0]])
+    else:
+        # In case there ar no creeps
+        pos_values_cur_bottom = [0]
     neg_values_cur_bottom = [0] * len(pos_values_cur_bottom)
     bottom = [0] * len(neg_values_cur_bottom)
     for category, values in daily_creep.items():
@@ -183,7 +187,7 @@ def plot_sprint_burn_and_creep(
     _, axis = plt.subplots()
 
     # Shading
-    for date in sprint_dates.dates_witout_development:
+    for date in sprint_dates.dates_without_development:
         xmin = date - pd.DateOffset(1)
         xmax = date
         axis.axvspan(xmin=xmin, xmax=xmax, alpha=0.3, color="gray")

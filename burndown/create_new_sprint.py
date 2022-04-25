@@ -70,6 +70,13 @@ if __name__ == "__main__":
         help="Number of days in the sprint (including week-ends)",
     )
     parser.add_argument(
+        "-m",
+        "--count_mid_day",
+        default=True,
+        type=bool,
+        help="In case the sprint planning is during mid-day: Add one day to the end of the sprint. This day will not be considered in the ideal burn.",
+    )
+    parser.add_argument(
         "-d",
         "--days_off",
         nargs="+",
@@ -82,8 +89,13 @@ if __name__ == "__main__":
     days_off = (
         [pd.to_datetime(date) for date in args.days_off]
         if args.days_off is not None
-        else None
+        else list()
     )
+
+    if args.count_mid_day:
+        days_off.append((pd.to_datetime(date) + pd.DateOffset(args.length)).date())
+        args.length += 1
+
     sprint_dates_ = SprintDates(date, args.length, days_off)
 
     sheet_name_ = f"{args.release}-{args.sprint_number}"

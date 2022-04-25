@@ -50,11 +50,11 @@ class SprintDates:
                 List of days where there will be no sprint. Defaults to None.
         """
         # 6 and 7 are iso Saturday and Sunday
-        self.dates_witout_development = [
+        self.dates_without_development = [
             date for date in self.dates if date.isoweekday() in [6, 7]
         ]
         if days_off is not None:
-            self.dates_witout_development += days_off
+            self.dates_without_development += days_off
 
     def set_days_of_development(self, sprint_length: int) -> None:
         """Set the number of days where there will be development.
@@ -62,4 +62,4 @@ class SprintDates:
         Args:
             sprint_length (int): Length of the spring
         """
-        self.days_of_development = sprint_length - len(self.dates_witout_development)
+        self.days_of_development = sprint_length - len(self.dates_without_development)
