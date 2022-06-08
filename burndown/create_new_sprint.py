@@ -46,7 +46,6 @@ def start_new_sprint(
 
 
 if __name__ == "__main__":
-    date = pd.to_datetime("today")
     root_path = Path(__file__).parents[1].resolve()
 
     sheet_dir = root_path.joinpath("data")
@@ -78,6 +77,12 @@ if __name__ == "__main__":
     )
     parser.add_argument(
         "-d",
+        "--start_date",
+        type=str,
+        help="Start date of sprint on form yyyy-mm-dd",
+    )
+    parser.add_argument(
+        "-o",
         "--days_off",
         nargs="+",
         type=str,
@@ -85,6 +90,11 @@ if __name__ == "__main__":
     )
 
     args = parser.parse_args()
+
+    if args.start_date is not None:
+        date = pd.to_datetime(args.start_date)
+    else:
+        date = pd.to_datetime("today")
 
     days_off = (
         [pd.to_datetime(date) for date in args.days_off]
