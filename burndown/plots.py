@@ -242,7 +242,7 @@ def plot_sprint_creep_categories(
 
     # Bar plots
     for category, creep in sprint_creep_categories_df.iterrows():
-        axis.bar(category, creep, width=0.75)
+        axis.bar(category, creep.values.item(), width=0.75)
 
     # Prettifying
     axis.set_title(f"{sprint_name} Creep Categories")
@@ -279,7 +279,7 @@ def plot_sprint_categories(
     )
 
     for category, creep in sprint_categories_df.iterrows():
-        axis.bar(category, creep, width=0.75)
+        axis.bar(category, creep.values.item(), width=0.75)
 
     # Prettifying
     axis.set_title(f"{sprint_name} Categories")
@@ -297,13 +297,16 @@ def plot_sprint_categories(
     plt.savefig(str(save_path), dpi=300, transparent=False)
 
 
-def plot_burn_trend(burn_trend_df: pd.DataFrame, save_dir: Path) -> None:
+def plot_burn_trend(
+    burn_trend_df: pd.DataFrame, save_dir: Path, percentage: bool
+) -> None:
     """
     Plot and save the trend of burn categories.
 
     Args:
         creep_trend_df (pd.DataFrame): The data frame containing the creep trend
         save_dir (Path): Directory to store the plot to
+        percentage (bool): Whether or not we're plotting a percentage
     """
     plt.style.use("ggplot")
     fig, axis = plt.subplots()
@@ -327,27 +330,39 @@ def plot_burn_trend(burn_trend_df: pd.DataFrame, save_dir: Path) -> None:
     )
 
     axis.set_title("Burned category trend")
-    axis.set_ylabel("Storypoints")
+    if not percentage:
+        axis.set_ylabel("Storypoints")
+    else:
+        axis.set_ylabel("Percentage")
+        axis.yaxis.set_major_formatter(mtick.PercentFormatter())
     axis.set_xlabel("Sprint")
     for label in axis.get_xticklabels():
         label.set_rotation(65)
 
     # Save
     plt.tight_layout()
-    save_path = save_dir.joinpath(
-        f"{pd.to_datetime('today').date()}-category_trend.png"
-    )
+    if not percentage:
+        save_path = save_dir.joinpath(
+            f"{pd.to_datetime('today').date()}-category_trend.png"
+        )
+    else:
+        save_path = save_dir.joinpath(
+            f"{pd.to_datetime('today').date()}-category_trend_percentage.png"
+        )
     print(f"Saving image to: {save_path}")
     plt.savefig(str(save_path), dpi=300, transparent=False)
 
 
-def plot_creep_trend(creep_trend_df: pd.DataFrame, save_dir: Path) -> None:
+def plot_creep_trend(
+    creep_trend_df: pd.DataFrame, save_dir: Path, percentage: bool
+) -> None:
     """
     Plot and save the trend of creep categories.
 
     Args:
         creep_trend_df (pd.DataFrame): The data frame containing the creep trend
         save_dir (Path): Directory to store the plot to
+        percentage (bool): Whether or not we're plotting a percentage
     """
     plt.style.use("ggplot")
     fig, axis = plt.subplots()
@@ -367,14 +382,26 @@ def plot_creep_trend(creep_trend_df: pd.DataFrame, save_dir: Path) -> None:
     )
 
     axis.set_title("Creep Trend")
-    axis.set_ylabel("Storypoints")
+    if not percentage:
+        axis.set_ylabel("Storypoints")
+    else:
+        axis.set_ylabel("Percentage")
+        axis.yaxis.set_major_formatter(mtick.PercentFormatter())
     axis.set_xlabel("Sprint")
     for label in axis.get_xticklabels():
         label.set_rotation(65)
 
     # Save
     plt.tight_layout()
-    save_path = save_dir.joinpath(f"{pd.to_datetime('today').date()}-creep_trend.png")
+    if not percentage:
+        save_path = save_dir.joinpath(
+            f"{pd.to_datetime('today').date()}-creep_trend.png"
+        )
+    else:
+        save_path = save_dir.joinpath(
+            f"{pd.to_datetime('today').date()}-creep_trend_percentage.png"
+        )
+
     print(f"Saving image to: {save_path}")
     plt.savefig(str(save_path), dpi=300, transparent=False)
 
@@ -461,11 +488,9 @@ def plot_achievement_trend(achievement_df: pd.DataFrame, save_dir: Path) -> None
     plt.savefig(str(save_path), dpi=300, transparent=False)
 
 
-def plot_capacity_adjusted_burn(
-    burndown_trend_df: pd.DataFrame, save_dir: Path
-) -> None:
+def plot_burn_per_person_day(burndown_trend_df: pd.DataFrame, save_dir: Path) -> None:
     """
-    Plot and save the capacity adjusted burndown trend.
+    Plot and save the burn per person day trend.
 
     Args:
         burndown_trend_df (pd.DataFrame): The data frame containing the burndowns across
@@ -478,10 +503,10 @@ def plot_capacity_adjusted_burn(
     # Line plots
     (adjusted,) = axis.plot(
         burndown_trend_df.index,
-        burndown_trend_df["capacity_adjusted_burn"],
+        burndown_trend_df["burn_per_person_day"],
         marker=".",
         markersize=9,
-        label="Total burn/capacity",
+        label="Burn per person day",
     )
     (avg,) = axis.plot(
         burndown_trend_df.index,
@@ -494,7 +519,7 @@ def plot_capacity_adjusted_burn(
     axis.legend(handles=[adjusted, avg], loc="best", shadow=True)
 
     # Prettifying
-    axis.set_title("Capacity adjusted burn trend")
+    axis.set_title("Burn per person day")
     axis.set_ylabel("Storypoints")
     axis.set_xlabel("Sprint")
     for label in axis.get_xticklabels():
@@ -503,7 +528,7 @@ def plot_capacity_adjusted_burn(
     # Save
     plt.tight_layout()
     save_path = save_dir.joinpath(
-        f"{pd.to_datetime('today').date()}-capacity_adjusted_trend.png"
+        f"{pd.to_datetime('today').date()}-burn_per_person_day_trend.png"
     )
     print(f"Saving image to: {save_path}")
     plt.savefig(str(save_path), dpi=300, transparent=False)

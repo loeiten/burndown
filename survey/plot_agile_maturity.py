@@ -56,13 +56,13 @@ def get_agile_maturity(sheet_path: Path) -> pd.DataFrame:
             columns_map[original_column] = " ".join(dimension).capitalize()
 
     # Initialize the dict to create the df from
-    agile_dict = {"sprint": []}
+    agile_dict = {"Sprint": []}
     for _, dimension in columns_map.items():
         agile_dict[dimension] = []
 
     # Populate the agile_dict
     for sprint_name, raw_df in raw_dfs.items():
-        agile_dict["sprint"].append(sprint_name)
+        agile_dict["Sprint"].append(sprint_name)
         for original_column, dimension in columns_map.items():
             raw_df.loc[:, original_column] = raw_df.loc[:, original_column].apply(
                 extract_float_from_level_str
@@ -70,7 +70,7 @@ def get_agile_maturity(sheet_path: Path) -> pd.DataFrame:
             agile_dict[dimension].append(raw_df.loc[:, original_column].mean())
 
     agile_maturity_df = pd.DataFrame(agile_dict)
-    agile_maturity_df.set_index("sprint", inplace=True)
+    agile_maturity_df.set_index("Sprint", inplace=True)
     return agile_maturity_df
 
 

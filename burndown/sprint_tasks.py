@@ -87,6 +87,9 @@ class SprintTasks:
                 ),
                 :,
             ]
+
+            # Add release to the sprint
+            cur_sprint["Release"] = sprint_name.split("-")[0]
             self.sprint_tasks_sheets[sprint_name] = cur_sprint
 
         # Create sprint planning DataFrames (contains what was agreed upon during sprint planning)
@@ -218,13 +221,13 @@ class SprintTasks:
             categories[sprint_name] = (
                 self.sprint_tasks_sheets[sprint_name].groupby(group_by)[[col]].sum().T
             )
-            categories[sprint_name]["sprint"] = sprint_name
-            categories[sprint_name].set_index("sprint", inplace=True)
+            categories[sprint_name]["Release"] = sprint_name.split("-")[0]
+            categories[sprint_name]["Sprint"] = sprint_name
+            categories[sprint_name].set_index("Sprint", inplace=True)
 
         categories_df = pd.concat(
             [categories[sprint] for sprint in self.sprint_tasks_sheets.keys()]
         )
-        categories_df.sort_index(inplace=True)
         categories_df.sort_index(inplace=True, axis=1)
         categories_df.fillna(0, inplace=True)
         return categories_df
@@ -441,6 +444,7 @@ class SprintTasks:
                 * burndown_dict["sprint_start_burned"]
                 / sprint_start_points.loc[:, "Points"].sum()
             )
+            burndown_dict["Release"] = sprint_name.split("-")[0]
             burndowns[sprint_name] = pd.DataFrame(burndown_dict, index=[sprint_name])
 
         burndown = pd.concat(
@@ -451,22 +455,22 @@ class SprintTasks:
 
         # Get the capacity numbers
         capacity_path = self.sheet_dir.joinpath("capacity.xlsx")
-        capacity_dict = {"capacity": list(), "index": list()}
+        capacity_dict = {"person_days": list(), "index": list()}
         for sprint in burndown.index:
             capacity_dict["index"].append(sprint)
-            capacity_dict["capacity"].append(
+            capacity_dict["person_days"].append(
                 read_cell(path=capacity_path, sheet_name=sprint, column="F", row=11)
             )
 
         capacity_df = pd.DataFrame(capacity_dict)
         capacity_df.set_index("index", inplace=True)
         burndown = pd.concat([burndown, capacity_df], axis=1)
-        burndown["capacity_adjusted_burn"] = (
-            burndown["total_points"] / burndown["capacity"]
+        burndown["burn_per_person_day"] = (
+            burndown["total_points"] / burndown["person_days"]
         )
         window_size = 5
         burndown["rolling_average"] = (
-            burndown.loc[:, "capacity_adjusted_burn"].rolling(window=window_size).mean()
+            burndown.loc[:, "burn_per_person_day"].rolling(window=window_size).mean()
         )
         # Fill the nan-window
         burndown.loc[

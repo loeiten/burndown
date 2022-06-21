@@ -64,11 +64,13 @@ def main() -> None:
     sprint_categories_df = burn_categories_df.loc[
         burn_categories_df.index == sprint_name, :
     ].T
+    sprint_categories_df.drop("Release", axis=0, inplace=True)
     plot_sprint_categories(sprint_categories_df, charts_dir, sprint_name)
 
     sprint_creep_df = creep_categories_df.loc[
         creep_categories_df.index == sprint_name, :
     ].T
+    sprint_creep_df.drop("Release", axis=0, inplace=True)
     plot_sprint_creep_categories(sprint_creep_df, charts_dir, sprint_name)
 
 
