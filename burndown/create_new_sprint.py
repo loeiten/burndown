@@ -53,13 +53,18 @@ if __name__ == "__main__":
     sheet_path_ = sheet_dir.joinpath("burndown.xlsx")
 
     parser = argparse.ArgumentParser(description="Start a sprint.")
-    parser.add_argument("-r", "--release", type=str, help="Release number")
-    parser.add_argument("-s", "--sprint_number", type=str, help="Sprint number")
+    parser.add_argument(
+        "-r", "--release", type=str, help="Release number", required=True
+    )
+    parser.add_argument(
+        "-s", "--sprint_number", type=str, help="Sprint number", required=True
+    )
     parser.add_argument(
         "-p",
         "--storypoints_start",
         type=float,
         help="Number of storypoints at sprint start",
+        required=True,
     )
     parser.add_argument(
         "-l",
