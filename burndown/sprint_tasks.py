@@ -242,7 +242,9 @@ class SprintTasks:
         Returns:
             pd.DataFrame: The DataFrame of the creep categories.
         """
-        return self._get_categories(group_by="creep_category", col="creep")
+        creep_categories = self._get_categories(group_by="creep_category", col="creep")
+        creep_categories.sort_index(inplace=True)
+        return creep_categories
 
     def get_burn_categories(self) -> pd.DataFrame:
         """
@@ -255,6 +257,7 @@ class SprintTasks:
             pd.DataFrame: The DataFrame of the creep categories.
         """
         category_df = self._get_categories(group_by="category", col="burned")
+        category_df.sort_index(inplace=True)
         return category_df
 
     def get_sprint_planning_burn(

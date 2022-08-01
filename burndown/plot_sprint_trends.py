@@ -91,7 +91,7 @@ def main() -> None:
             burn_categories.loc[:, "Release"] == args.release, :
         ]
         creep_categories = creep_categories.loc[
-            total_burn.loc[:, "Release"] == args.release, :
+            creep_categories.loc[:, "Release"] == args.release, :
         ]
     total_burn.drop("Release", axis=1, inplace=True)
     burn_categories.drop("Release", axis=1, inplace=True)
